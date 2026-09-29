@@ -292,7 +292,7 @@ export default {
 
     if (url.pathname === "/tv") {
       const tvUrl = new URL(request.url);
-      tvUrl.pathname = "/";
+      tvUrl.pathname = "/tv.html";
       return env.ASSETS.fetch(new Request(tvUrl.toString(), request));
     }
 
