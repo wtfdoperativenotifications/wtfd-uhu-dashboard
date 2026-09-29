@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>WTFD Unit Hour Utilization</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">WASHINGTON TOWNSHIP FIRE DEPARTMENT</div>
+      <h1>Unit Hour Utilization</h1>
+    </div>
+    <div class="controls">
+      <label for="shiftDate">Shift Date</label>
+      <input id="shiftDate" type="date">
+    </div>
+  </header>
+
+  <main>
+    <section class="shiftline">
+      <div>
+        <span id="shiftDateLabel">—</span>
+        <span class="dot">•</span>
+        <span id="shiftName">—</span>
+      </div>
+      <div class="muted">07:00–07:00 operational day</div>
+    </section>
+
+    <section class="cards">
+      <article class="metric">
+        <span class="metric-label">Daily System UHU</span>
+        <strong id="dailySystemUhu">—</strong>
+        <small id="dailySystemDetail">—</small>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Daily Responses</span>
+        <strong id="dailyRuns">—</strong>
+        <small>resource responses</small>
+      </article>
+      <article class="metric">
+        <span class="metric-label">YTD System UHU</span>
+        <strong id="ytdSystemUhu">—</strong>
+        <small id="ytdSystemDetail">—</small>
+      </article>
+      <article class="metric">
+        <span class="metric-label">YTD Responses</span>
+        <strong id="ytdRuns">—</strong>
+        <small>resource responses</small>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">RESOURCE COMPARISON</div>
+          <h2>Daily vs. Year-to-Date</h2>
+        </div>
+        <div class="legend">
+          <span><i class="swatch daily"></i>Daily</span>
+          <span><i class="swatch ytd"></i>YTD</span>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Resource</th>
+              <th class="num">Daily Runs</th>
+              <th class="num">Daily Hours</th>
+              <th>Daily UHU</th>
+              <th class="num">YTD Runs</th>
+              <th class="num">YTD Hours</th>
+              <th>YTD UHU</th>
+            </tr>
+          </thead>
+          <tbody id="resourceRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="eyebrow">30-DAY TREND</div>
+          <h2 id="trendTitle">Resource UHU</h2>
+        </div>
+        <select id="trendResource" aria-label="Trend resource"></select>
+      </div>
+      <div class="chart" id="trendChart"></div>
+    </section>
+
+    <section class="note">
+      <strong>Cross-staffed resources:</strong>
+      E43 represents the shared M43/E43 crew resource. E44 represents the shared M44/E44 crew resource.
+      Their committed time is merged so overlapping assignments are not double-counted.
+    </section>
+  </main>
+
+  <div id="status" class="status" hidden></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

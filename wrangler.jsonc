@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wtfd-uhu-dashboard",
+  "main": "./src/worker.js",
+  "compatibility_date": "2026-09-29",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "wtfd-fleet",
+      "database_id": "ebd9c7d6-9089-4ead-bb53-f609e977f03f"
+    }
+  ]
+}
