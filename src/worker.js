@@ -85,7 +85,17 @@ async function getDashboard(env, requestedDate) {
   const yearStart = `${year}-01-01`;
   const trendStart = addDays(selectedDate, -29);
 
-  const [dailyResult, ytdResult, trendResult] = await Promise.all([
+  const dailySeed = await env.DB.prepare(`
+    SELECT shift_number, shift_name
+    FROM resource_uhu_daily
+    WHERE shift_date = ?
+    LIMIT 1
+  `).bind(selectedDate).first();
+
+  const selectedShiftNumber = Number(dailySeed?.shift_number || 0);
+  const selectedShiftName = dailySeed?.shift_name || null;
+
+  const [dailyResult, ytdResult, platoonYtdResult, departmentPlatoonResult, trendResult] = await Promise.all([
     env.DB.prepare(`
       SELECT
         resource_id,
@@ -122,6 +132,41 @@ async function getDashboard(env, requestedDate) {
 
     env.DB.prepare(`
       SELECT
+        resource_id,
+        SUM(run_count) AS platoon_ytd_runs,
+        SUM(committed_seconds) AS platoon_ytd_committed_seconds,
+        ROUND(SUM(committed_seconds) / 3600.0, 1) AS platoon_ytd_committed_hours,
+        SUM(available_minutes) AS platoon_ytd_available_minutes,
+        ROUND(
+          SUM(committed_seconds) /
+          NULLIF(SUM(available_minutes) * 60.0, 0),
+          4
+        ) AS platoon_ytd_uhu
+      FROM resource_uhu_daily
+      WHERE shift_date >= ?
+        AND shift_date <= ?
+        AND shift_number = ?
+      GROUP BY resource_id
+    `).bind(yearStart, selectedDate, selectedShiftNumber).all(),
+
+    env.DB.prepare(`
+      SELECT
+        SUM(run_count) AS platoon_runs,
+        SUM(committed_seconds) AS platoon_committed_seconds,
+        SUM(available_minutes) AS platoon_available_minutes,
+        ROUND(
+          SUM(committed_seconds) /
+          NULLIF(SUM(available_minutes) * 60.0, 0),
+          4
+        ) AS platoon_system_uhu
+      FROM resource_uhu_daily
+      WHERE shift_date >= ?
+        AND shift_date <= ?
+        AND shift_number = ?
+    `).bind(yearStart, selectedDate, selectedShiftNumber).first(),
+
+    env.DB.prepare(`
+      SELECT
         shift_date,
         resource_id,
         daily_uhu,
@@ -135,9 +180,11 @@ async function getDashboard(env, requestedDate) {
   ]);
 
   const ytdById = new Map((ytdResult.results || []).map(r => [r.resource_id, r]));
+  const platoonYtdById = new Map((platoonYtdResult.results || []).map(r => [r.resource_id, r]));
 
   const resources = (dailyResult.results || []).map(d => {
     const y = ytdById.get(d.resource_id) || {};
+    const p = platoonYtdById.get(d.resource_id) || {};
     return {
       resource_id: d.resource_id,
       display_id: labelResource(d.resource_id),
@@ -149,6 +196,11 @@ async function getDashboard(env, requestedDate) {
       daily_committed_hours: Number(d.committed_hours || 0),
       daily_uhu: Number(d.daily_uhu || 0),
       daily_uhu_pct: pct(d.daily_uhu),
+      platoon_ytd_runs: Number(p.platoon_ytd_runs || 0),
+      platoon_ytd_committed_hours: Number(p.platoon_ytd_committed_hours || 0),
+      platoon_ytd_available_hours: Number((Number(p.platoon_ytd_available_minutes || 0) / 60).toFixed(1)),
+      platoon_ytd_uhu: Number(p.platoon_ytd_uhu || 0),
+      platoon_ytd_uhu_pct: pct(p.platoon_ytd_uhu),
       ytd_runs: Number(y.ytd_runs || 0),
       ytd_committed_hours: Number(y.ytd_committed_hours || 0),
       ytd_available_hours: Number((Number(y.ytd_available_minutes || 0) / 60).toFixed(1)),
@@ -164,8 +216,8 @@ async function getDashboard(env, requestedDate) {
   const ytdCommitted = sorted.reduce((s, r) => s + Number(r.ytd_committed_hours || 0), 0);
   const ytdAvailable = sorted.reduce((s, r) => s + Number(r.ytd_available_hours || 0), 0);
 
-  const shiftName = sorted[0]?.shift_name || null;
-  const shiftNumber = sorted[0]?.shift_number || null;
+  const shiftName = selectedShiftName || sorted[0]?.shift_name || null;
+  const shiftNumber = selectedShiftNumber || sorted[0]?.shift_number || null;
 
   const trend = (trendResult.results || []).map(r => ({
     shift_date: r.shift_date,
@@ -192,7 +244,11 @@ async function getDashboard(env, requestedDate) {
       ytd_runs: sorted.reduce((s, r) => s + r.ytd_runs, 0),
       ytd_committed_hours: Number(ytdCommitted.toFixed(1)),
       ytd_system_uhu: ytdAvailable ? Number((ytdCommitted / ytdAvailable).toFixed(4)) : 0,
-      ytd_system_uhu_pct: ytdAvailable ? Number(((ytdCommitted / ytdAvailable) * 100).toFixed(2)) : 0
+      ytd_system_uhu_pct: ytdAvailable ? Number(((ytdCommitted / ytdAvailable) * 100).toFixed(2)) : 0,
+      platoon_ytd_runs: Number(departmentPlatoonResult?.platoon_runs || 0),
+      platoon_ytd_committed_hours: Number((Number(departmentPlatoonResult?.platoon_committed_seconds || 0) / 3600).toFixed(1)),
+      platoon_ytd_system_uhu: Number(departmentPlatoonResult?.platoon_system_uhu || 0),
+      platoon_ytd_system_uhu_pct: pct(departmentPlatoonResult?.platoon_system_uhu || 0)
     },
     trend
   };
