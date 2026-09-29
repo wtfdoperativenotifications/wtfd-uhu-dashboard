@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 const params = new URLSearchParams(window.location.search);
-const tvMode = params.get("tv") === "1";
+const tvMode = params.get("tv") === "1" || window.location.pathname === "/tv";
 const tvView = String(params.get("view") || "summary").toLowerCase();
 const displayId = String(params.get("display") || "hq").toLowerCase();
 
