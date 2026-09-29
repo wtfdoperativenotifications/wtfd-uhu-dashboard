@@ -290,6 +290,12 @@ export default {
       }
     }
 
+    if (url.pathname === "/tv") {
+      const tvUrl = new URL(request.url);
+      tvUrl.pathname = "/";
+      return env.ASSETS.fetch(new Request(tvUrl.toString(), request));
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
