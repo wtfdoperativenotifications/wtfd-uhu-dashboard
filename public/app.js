@@ -2,7 +2,24 @@ const $ = (id) => document.getElementById(id);
 
 const params = new URLSearchParams(window.location.search);
 const tvMode = params.get("tv") === "1";
+const tvView = String(params.get("view") || "summary").toLowerCase();
+const displayId = String(params.get("display") || "hq").toLowerCase();
+
+const DISPLAY_RESOURCES = Object.freeze({
+  hq: ["M41","M42","E43","E44","M45","E42","E45","L41","BC40"],
+  station41: ["M41","L41"],
+  station42: ["M42","E42"],
+  station43: ["E43"],
+  station44: ["E44"],
+  station45: ["M45","E45","BC40"]
+});
+
 let dashboard = null;
+
+function visibleResources(resources) {
+  const allowed = new Set(DISPLAY_RESOURCES[displayId] || DISPLAY_RESOURCES.hq);
+  return resources.filter(r => allowed.has(r.display_id));
+}
 
 function fmtDate(s, short = false) {
   if (!s) return "—";
@@ -172,7 +189,7 @@ function renderTv(data) {
       </section>
 
       <section class="tv-grid">
-        ${data.resources.map(r => `
+        ${visibleResources(data.resources).map(r => `
           <article class="tv-unit-card">
             <div class="tv-unit-name">${r.display_id}</div>
             <div class="tv-unit-primary">
@@ -205,6 +222,91 @@ function renderTv(data) {
   `;
 }
 
+
+function sparkline(points, benchmark) {
+  const width = 520;
+  const height = 150;
+  const pad = 8;
+  const values = points.map(p => Number(p.daily_uhu_pct || 0));
+  const max = Math.max(25, benchmark || 0, ...values);
+  const step = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
+  const y = v => height - pad - ((Number(v || 0) / max) * (height - pad * 2));
+  const path = points.map((p, i) => `${i ? "L" : "M"} ${(pad + i * step).toFixed(1)} ${y(p.daily_uhu_pct).toFixed(1)}`).join(" ");
+  const benchY = y(benchmark).toFixed(1);
+  return `
+    <svg class="tv-spark" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="${pad}" y1="${benchY}" x2="${width-pad}" y2="${benchY}" class="tv-spark-benchmark"></line>
+      <path d="${path}" class="tv-spark-line"></path>
+    </svg>`;
+}
+
+function renderTvTrend(data) {
+  dashboard = data;
+  document.documentElement.classList.add("tv-mode");
+  document.body.className = "tv-body";
+
+  const resources = visibleResources(data.resources);
+  const ids = new Set(resources.map(r => r.display_id));
+  const trendById = new Map();
+  for (const row of data.trend) {
+    if (!ids.has(row.display_id)) continue;
+    if (!trendById.has(row.display_id)) trendById.set(row.display_id, []);
+    trendById.get(row.display_id).push(row);
+  }
+
+  const label = displayId === "hq"
+    ? "HEADQUARTERS · ALL STAFFED RESOURCES"
+    : `STATION ${displayId.replace("station","")} · ASSIGNED RESOURCES`;
+
+  const cardClass = resources.length <= 2 ? "few" : resources.length <= 4 ? "medium" : "all";
+
+  document.body.innerHTML = `
+    <main class="tv-shell tv-trend-shell">
+      <header class="tv-uhu-header">
+        <div>
+          <div class="tv-kicker">WASHINGTON TOWNSHIP FIRE DEPARTMENT</div>
+          <h1>30-DAY UNIT HOUR UTILIZATION</h1>
+        </div>
+        <div class="tv-shift-block">
+          <strong>${label}</strong>
+          <span>Through ${fmtDate(data.selected_date)} · ${data.shift_name} / Platoon ${data.shift_number}</span>
+        </div>
+      </header>
+
+      <section class="tv-trend-grid ${cardClass}">
+        ${resources.map(r => {
+          const rows = trendById.get(r.display_id) || [];
+          const avg = rows.length ? rows.reduce((a,b)=>a+Number(b.daily_uhu_pct||0),0)/rows.length : 0;
+          return `
+            <article class="tv-trend-card">
+              <div class="tv-trend-card-head">
+                <strong>${r.display_id}</strong>
+                <div>
+                  <span>30-Day Avg <b>${pct(avg)}</b></span>
+                  <span>${data.shift_name} YTD <b>${pct(r.platoon_ytd_uhu_pct)}</b></span>
+                </div>
+              </div>
+              <div class="tv-spark-wrap">
+                ${sparkline(rows, r.platoon_ytd_uhu_pct)}
+              </div>
+              <div class="tv-trend-foot">
+                <span>${rows[0] ? fmtDate(rows[0].shift_date, true) : "—"}</span>
+                <span>Dashed line = ${data.shift_name} YTD benchmark</span>
+                <span>${rows.at(-1) ? fmtDate(rows.at(-1).shift_date, true) : "—"}</span>
+              </div>
+            </article>`;
+        }).join("")}
+      </section>
+
+      <footer class="tv-footer">
+        <span>E43 = shared M43/E43 crew resource · E44 = shared M44/E44 crew resource</span>
+        <span>Daily UHU = committed time ÷ available unit hours</span>
+      </footer>
+    </main>
+    <div id="status" class="status" hidden></div>
+  `;
+}
+
 async function load(date = "") {
   hideStatus();
   try {
@@ -212,7 +314,8 @@ async function load(date = "") {
     const res = await fetch(`/api/uhu${qs}`, {cache:"no-store"});
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || data.error || "Unable to load UHU data.");
-    if (tvMode) renderTv(data);
+    if (tvMode && tvView === "trend") renderTvTrend(data);
+    else if (tvMode) renderTv(data);
     else renderDesktop(data);
   } catch (err) {
     showStatus(err.message || String(err));
