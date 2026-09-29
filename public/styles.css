@@ -152,3 +152,38 @@ body.tv-body{margin:0;padding:0;background:#07111f;color:#fff}
   .tv-unit-primary strong{font-size:34px}
   .tv-unit-comparison strong{font-size:21px}
 }
+
+
+/* Fleet TV 30-day trend */
+.tv-trend-shell{grid-template-rows:auto 1fr auto}
+.tv-trend-grid{
+  min-height:0;display:grid;gap:16px
+}
+.tv-trend-grid.all{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+.tv-trend-grid.medium{grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr}
+.tv-trend-grid.few{grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr}
+.tv-trend-card{
+  min-height:0;background:linear-gradient(180deg,#112235,#0c1825);
+  border:1px solid #29415a;border-radius:15px;padding:15px 18px;
+  display:grid;grid-template-rows:auto 1fr auto;gap:8px
+}
+.tv-trend-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.tv-trend-card-head>strong{font-size:30px;line-height:1}
+.tv-trend-card-head>div{display:flex;gap:18px;align-items:center}
+.tv-trend-card-head span{font-size:13px;color:#a9bbcc;text-transform:uppercase;font-weight:800;letter-spacing:.5px}
+.tv-trend-card-head b{font-size:20px;color:#fff;margin-left:5px}
+.tv-spark-wrap{min-height:0;display:flex;align-items:stretch}
+.tv-spark{width:100%;height:100%;min-height:105px;overflow:visible}
+.tv-spark-line{fill:none;stroke:#4fa3ff;stroke-width:4;vector-effect:non-scaling-stroke}
+.tv-spark-benchmark{stroke:#f0b34d;stroke-width:2.5;stroke-dasharray:8 7;vector-effect:non-scaling-stroke}
+.tv-trend-foot{display:flex;justify-content:space-between;gap:10px;color:#91a7bc;font-size:11px}
+.tv-trend-grid.medium .tv-trend-card,
+.tv-trend-grid.few .tv-trend-card{padding:22px 24px}
+.tv-trend-grid.medium .tv-trend-card-head>strong,
+.tv-trend-grid.few .tv-trend-card-head>strong{font-size:42px}
+.tv-trend-grid.medium .tv-trend-card-head b,
+.tv-trend-grid.few .tv-trend-card-head b{font-size:28px}
+.tv-trend-grid.medium .tv-trend-card-head span,
+.tv-trend-grid.few .tv-trend-card-head span{font-size:16px}
+.tv-trend-grid.medium .tv-spark,
+.tv-trend-grid.few .tv-spark{min-height:220px}
